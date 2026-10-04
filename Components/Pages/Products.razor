@@ -1,0 +1,244 @@
+@page "/products"
+@inject ISQLiteService Db
+@inject IJSRuntime JS
+
+<PageTitle>Products — ShopRecorder</PageTitle>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>Products</h1>
+            <p class="page-sub">@AllProducts.Count items in your shop</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" @onclick="OpenAdd"><i class="bi bi-plus-lg"></i> Add product</button>
+        </div>
+    </div>
+
+    @if (!Loaded)
+    {
+        <div class="loading"><span class="spinner-border spinner-border-sm"></span> Loading products…</div>
+    }
+    else
+    {
+        <div class="card-panel">
+            <div class="table-toolbar">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search products…" @bind-value="Search" @bind-value:event="oninput" />
+                </div>
+            </div>
+
+            @if (Filtered.Count == 0)
+            {
+                <div class="empty-state">
+                    <i class="bi bi-search"></i>
+                    <p>@(AllProducts.Count == 0 ? "No products yet — add your first product." : "No products match your search.")</p>
+                    @if (AllProducts.Count == 0)
+                    {
+                        <button class="btn btn-primary btn-sm" @onclick="OpenAdd"><i class="bi bi-plus-lg"></i> Add product</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table app-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Stock</th>
+                                <th>Status</th>
+                                <th>Added</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Filtered)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="prod-cell">
+                                            <span class="chip @ChipClass(p)">@Initial(p)</span>
+                                            <span class="prod-name">@p.Name</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-semibold">@Fmt.Money(p.Price)</td>
+                                    <td class="text-end @(p.IsLowStock ? "text-danger-strong" : "")">@p.StockQuantity</td>
+                                    <td>
+                                        @if (p.StockQuantity == 0)
+                                        {
+                                            <span class="badge-badge gray">Out of stock</span>
+                                        }
+                                        else if (p.IsLowStock)
+                                        {
+                                            <span class="badge-badge danger">Low stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-badge green">In stock</span>
+                                        }
+                                    </td>
+                                    <td class="muted">@Fmt.Date(p.CreatedAt)</td>
+                                    <td class="text-end">
+                                        <button class="icon-btn" title="Edit" @onclick="() => OpenEdit(p)"><i class="bi bi-pencil"></i></button>
+                                        <button class="icon-btn danger" title="Delete" @onclick="() => OpenDelete(p)"><i class="bi bi-trash3"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* ===== Add / Edit modal ===== *@
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(IsEdit ? "Edit product" : "Add product")</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Product name</label>
+                    <input class="form-control" @bind="Form.Name" placeholder="e.g. Milo 400g" maxlength="120" />
+                </div>
+                <div class="row g-3">
+                    <div class="col-4">
+                        <label class="form-label">Price (GHS)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" @bind="Form.Price" />
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Stock qty</label>
+                        <input type="number" step="1" min="0" class="form-control" @bind="Form.StockQuantity" />
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Alert at</label>
+                        <input type="number" step="1" min="0" class="form-control" @bind="Form.LowStockThreshold" />
+                    </div>
+                </div>
+                <p class="form-hint"><i class="bi bi-info-circle"></i> "Alert at" is the low-stock threshold (default 5) — the item is flagged when stock falls to or below it.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveProduct"><i class="bi bi-check2"></i> Save product</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ===== Delete confirm modal ===== *@
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body delete-body">
+                <div class="del-ic"><i class="bi bi-trash3"></i></div>
+                <h5>Delete "@(ToDelete?.Name)"?</h5>
+                <p>This product will be removed permanently. Past sales are not affected.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Product> AllProducts = new();
+    private bool Loaded;
+    private string Search = "";
+
+    private Product Form = new();
+    private bool IsEdit;
+    private Product? ToDelete;
+
+    private List<Product> Filtered =>
+        string.IsNullOrWhiteSpace(Search)
+            ? AllProducts
+            : AllProducts.Where(p => p.Name.Contains(Search.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Db.Init();
+        AllProducts = await Db.GetProducts();
+        Loaded = true;
+    }
+
+    private async Task Reload()
+    {
+        AllProducts = await Db.GetProducts();
+    }
+
+    private void OpenAdd()
+    {
+        IsEdit = false;
+        Form = new Product { LowStockThreshold = 5 };
+        _ = JS.InvokeVoidAsync("ui.showModal", "productModal");
+    }
+
+    private void OpenEdit(Product p)
+    {
+        IsEdit = true;
+        Form = new Product { Id = p.Id, Name = p.Name, Price = p.Price, StockQuantity = p.StockQuantity, LowStockThreshold = p.LowStockThreshold, CreatedAt = p.CreatedAt };
+        _ = JS.InvokeVoidAsync("ui.showModal", "productModal");
+    }
+
+    private void OpenDelete(Product p)
+    {
+        ToDelete = p;
+        _ = JS.InvokeVoidAsync("ui.showModal", "confirmDeleteModal");
+    }
+
+    private async Task SaveProduct()
+    {
+        if (string.IsNullOrWhiteSpace(Form.Name))
+        {
+            await Toast("Product name is required.", "error");
+            return;
+        }
+        if (Form.Price < 0 || Form.StockQuantity < 0 || Form.LowStockThreshold < 0)
+        {
+            await Toast("Price, stock and threshold cannot be negative.", "error");
+            return;
+        }
+
+        Form.Name = Form.Name.Trim();
+
+        if (IsEdit)
+        {
+            await Db.UpdateProduct(Form);
+            await Toast($"\"{Form.Name}\" updated.", "success");
+        }
+        else
+        {
+            await Db.AddProduct(Form);
+            await Toast($"\"{Form.Name}\" added to products.", "success");
+        }
+
+        await JS.InvokeVoidAsync("ui.hideModal", "productModal");
+        await Reload();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (ToDelete is null) return;
+        await Db.DeleteProduct(ToDelete);
+        await Toast($"\"{ToDelete.Name}\" deleted.", "success");
+        ToDelete = null;
+        await JS.InvokeVoidAsync("ui.hideModal", "confirmDeleteModal");
+        await Reload();
+    }
+
+    private Task Toast(string message, string type) => JS.InvokeVoidAsync("ui.toast", message, type).AsTask();
+
+    // ---- tiny view helpers ----
+    private string Initial(Product p) => string.IsNullOrEmpty(p.Name) ? "?" : p.Name[..1].ToUpperInvariant();
+
+    private string ChipClass(Product p) => "chip-" + (p.Id % 5) switch { 0 => "a", 1 => "b", 2 => "c", 3 => "d", _ => "e" };
+}
