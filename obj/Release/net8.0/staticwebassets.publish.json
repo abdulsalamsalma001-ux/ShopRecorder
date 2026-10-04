@@ -1,0 +1,77 @@
+{
+  "Version": 1,
+  "Hash": "a7qotNq2XWvAp5NhJ4PB6gZPzpRWjpNlWmPFkXtFi0I=",
+  "Source": "ShopRecorder",
+  "BasePath": "_content/ShopRecorder",
+  "Mode": "Default",
+  "ManifestType": "Publish",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "ShopRecorder\\wwwroot",
+      "Source": "ShopRecorder",
+      "ContentRoot": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\",
+      "BasePath": "_content/ShopRecorder",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\css\\app.css",
+      "SourceId": "ShopRecorder",
+      "SourceType": "Discovered",
+      "ContentRoot": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\",
+      "BasePath": "_content/ShopRecorder",
+      "RelativePath": "css/app.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\css\\app.css"
+    },
+    {
+      "Identity": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\favicon.svg",
+      "SourceId": "ShopRecorder",
+      "SourceType": "Discovered",
+      "ContentRoot": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\",
+      "BasePath": "_content/ShopRecorder",
+      "RelativePath": "favicon.svg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\favicon.svg"
+    },
+    {
+      "Identity": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\js\\app.js",
+      "SourceId": "ShopRecorder",
+      "SourceType": "Discovered",
+      "ContentRoot": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\",
+      "BasePath": "_content/ShopRecorder",
+      "RelativePath": "js/app.js",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\js\\app.js"
+    }
+  ]
+}

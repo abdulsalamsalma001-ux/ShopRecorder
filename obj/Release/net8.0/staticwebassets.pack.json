@@ -1,0 +1,33 @@
+{
+  "Files": [
+    {
+      "Id": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\css\\app.css",
+      "PackagePath": "staticwebassets\\css\\app.css"
+    },
+    {
+      "Id": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\favicon.svg",
+      "PackagePath": "staticwebassets\\favicon.svg"
+    },
+    {
+      "Id": "E:\\projects\\riderProjects\\BlazorAppShopSales\\ShopRecorder\\wwwroot\\js\\app.js",
+      "PackagePath": "staticwebassets\\js\\app.js"
+    },
+    {
+      "Id": "obj\\Release\\net8.0\\staticwebassets\\msbuild.ShopRecorder.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Release\\net8.0\\staticwebassets\\msbuild.build.ShopRecorder.props",
+      "PackagePath": "build\\ShopRecorder.props"
+    },
+    {
+      "Id": "obj\\Release\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.ShopRecorder.props",
+      "PackagePath": "buildMultiTargeting\\ShopRecorder.props"
+    },
+    {
+      "Id": "obj\\Release\\net8.0\\staticwebassets\\msbuild.buildTransitive.ShopRecorder.props",
+      "PackagePath": "buildTransitive\\ShopRecorder.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
