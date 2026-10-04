@@ -1,0 +1,140 @@
+@page "/sales"
+@inject ISQLiteService Db
+
+<PageTitle>Sales History — ShopRecorder</PageTitle>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>Sales History</h1>
+            <p class="page-sub">Every sale recorded in your shop</p>
+        </div>
+    </div>
+
+    @if (!Loaded)
+    {
+        <div class="loading"><span class="spinner-border spinner-border-sm"></span> Loading sales…</div>
+    }
+    else
+    {
+        <div class="mini-stats">
+            <div class="mini-stat"><span class="ms-label">All-time sales</span><span class="ms-value">@AllSales.Count</span></div>
+            <div class="mini-stat"><span class="ms-label">All-time revenue</span><span class="ms-value">@Fmt.Money(AllRevenue)</span></div>
+            <div class="mini-stat"><span class="ms-label">Today's revenue</span><span class="ms-value">@Fmt.Money(TodayRevenue)</span></div>
+        </div>
+
+        <div class="card-panel">
+            @if (AllSales.Count == 0)
+            {
+                <div class="empty-state">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <p>No sales yet.</p>
+                    <a class="btn btn-primary btn-sm" href="/pos"><i class="bi bi-cart2"></i> Record your first sale</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table app-table">
+                        <thead>
+                            <tr>
+                                <th>Receipt</th>
+                                <th>Date &amp; Time</th>
+                                <th class="text-center">Items</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Change</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in AllSales)
+                            {
+                                <tr>
+                                    <td class="mono">@Fmt.ReceiptNo(s.Id)</td>
+                                    <td>@Fmt.DateTime(s.SaleDate)</td>
+                                    <td class="text-center">@s.ItemsCount</td>
+                                    <td class="text-end muted">@Fmt.Money(s.AmountPaid)</td>
+                                    <td class="text-end muted">@Fmt.Money(s.ChangeDue)</td>
+                                    <td class="text-end fw-semibold">@Fmt.Money(s.TotalAmount)</td>
+                                    <td class="text-end">
+                                        <button class="icon-btn" title="View details" @onclick="() => ViewSale(s)"><i class="bi bi-eye"></i></button>
+                                        <NavLink class="icon-btn" title="Receipt" href="@($"/receipt/{s.Id}")"><i class="bi bi-printer"></i></NavLink>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* ===== Sale details modal ===== *@
+<div class="modal fade" id="saleDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sale @Fmt.ReceiptNo(Viewing?.Id ?? 0)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            @if (Viewing is not null)
+            {
+                <div class="modal-body">
+                    <p class="muted mb-3"><i class="bi bi-calendar3"></i> @Fmt.DateTime(Viewing.SaleDate)</p>
+                    <table class="table table-sm detail-table">
+                        <thead>
+                            <tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Each</th><th class="text-end">Subtotal</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Viewing.Items)
+                            {
+                                <tr>
+                                    <td>@item.ProductName</td>
+                                    <td class="text-center">@item.Quantity</td>
+                                    <td class="text-end">@Fmt.Money(item.Price)</td>
+                                    <td class="text-end">@Fmt.Money(item.Subtotal)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="detail-totals">
+                        <div class="cs-row"><span>Items</span><span>@Viewing.ItemsCount</span></div>
+                        <div class="cs-row"><span>Paid</span><span>@Fmt.Money(Viewing.AmountPaid)</span></div>
+                        <div class="cs-row"><span>Change</span><span>@Fmt.Money(Viewing.ChangeDue)</span></div>
+                        <div class="cs-row total"><span>Total</span><span>@Fmt.Money(Viewing.TotalAmount)</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                    <NavLink class="btn btn-primary" href="@($"/receipt/{Viewing.Id}")"><i class="bi bi-printer"></i> View receipt</NavLink>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Sale> AllSales = new();
+    private Sale? Viewing;
+    private bool Loaded;
+
+    private decimal AllRevenue => AllSales.Sum(s => s.TotalAmount);
+    private decimal TodayRevenue => AllSales.Where(s => s.SaleDate >= ShopClock.TodayStartUtc()).Sum(s => s.TotalAmount);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Db.Init();
+        AllSales = await Db.GetAllSales();
+        Loaded = true;
+    }
+
+    private void ViewSale(Sale s)
+    {
+        Viewing = s;
+        _ = JS.InvokeVoidAsync("ui.showModal", "saleDetailsModal");
+    }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+}

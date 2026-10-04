@@ -1,0 +1,171 @@
+@page "/"
+@inject ISQLiteService Db
+
+<PageTitle>Dashboard — ShopRecorder</PageTitle>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="page-sub">@todayLong</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-light" href="/products"><i class="bi bi-plus-lg"></i> Add product</a>
+            <a class="btn btn-primary" href="/pos"><i class="bi bi-cart2"></i> New sale</a>
+        </div>
+    </div>
+
+    @if (!Loaded)
+    {
+        <div class="loading"><span class="spinner-border spinner-border-sm"></span> Loading shop data…</div>
+    }
+    else
+    {
+        @* ===== Stat cards ===== *@
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-ic tint-green"><i class="bi bi-cash-coin"></i></div>
+                <div>
+                    <div class="stat-label">Today's sales</div>
+                    <div class="stat-value">@Fmt.Money(TodayTotal)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-ic tint-blue"><i class="bi bi-bag-check"></i></div>
+                <div>
+                    <div class="stat-label">Sales today</div>
+                    <div class="stat-value">@TodaySales.Count</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-ic tint-red"><i class="bi bi-exclamation-triangle"></i></div>
+                <div>
+                    <div class="stat-label">Low stock alerts</div>
+                    <div class="stat-value @(LowStock.Count > 0 ? "text-danger-strong" : "")">@LowStock.Count</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-ic tint-violet"><i class="bi bi-box-seam"></i></div>
+                <div>
+                    <div class="stat-label">Products</div>
+                    <div class="stat-value">@Fmt.Num(Products.Count)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            @* ===== Recent 5 sales ===== *@
+            <div class="col-lg-7">
+                <div class="card-panel h-100">
+                    <div class="card-panel-head">
+                        <h2><i class="bi bi-clock-history"></i> Recent sales</h2>
+                        <NavLink class="see-all" href="/sales">View all <i class="bi bi-arrow-right"></i></NavLink>
+                    </div>
+                    @if (RecentSales.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-receipt-cutoff"></i>
+                            <p>No sales recorded yet.</p>
+                            <a class="btn btn-primary btn-sm" href="/pos"><i class="bi bi-cart2"></i> Start selling</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table app-table">
+                                <thead>
+                                    <tr>
+                                        <th>Receipt</th>
+                                        <th>Time</th>
+                                        <th class="text-center">Items</th>
+                                        <th class="text-end">Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sale in RecentSales)
+                                    {
+                                        <tr>
+                                            <td class="mono">@Fmt.ReceiptNo(sale.Id)</td>
+                                            <td>@Fmt.DateTime(sale.SaleDate)</td>
+                                            <td class="text-center">@sale.ItemsCount</td>
+                                            <td class="text-end fw-semibold">@Fmt.Money(sale.TotalAmount)</td>
+                                            <td class="text-end">
+                                                <NavLink class="icon-btn" href="@($"/receipt/{sale.Id}")" title="View receipt"><i class="bi bi-printer"></i></NavLink>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* ===== Low stock alerts ===== *@
+            <div class="col-lg-5">
+                <div class="card-panel h-100">
+                    <div class="card-panel-head">
+                        <h2><i class="bi bi-exclamation-triangle"></i> Low stock</h2>
+                        @if (LowStock.Count > 0)
+                        {
+                            <span class="badge-badge danger">@LowStock.Count</span>
+                        }
+                    </div>
+                    @if (LowStock.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-check2-circle ok"></i>
+                            <p>All products are well stocked. Nice!</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="low-list">
+                            @foreach (var p in LowStock)
+                            {
+                                <li>
+                                    <span class="low-ic"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                                    <span class="low-name">@p.Name</span>
+                                    <span class="low-count">@p.StockQuantity left</span>
+                                </li>
+                            }
+                        </ul>
+                        <NavLink class="see-all mt-2 d-inline-block" href="/products">Review stock <i class="bi bi-arrow-right"></i></NavLink>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Product> Products = new();
+    private List<Sale> TodaySales = new();
+    private List<Sale> RecentSales = new();
+    private List<Product> LowStock = new();
+    private bool Loaded;
+    private string todayLong = "";
+
+    private decimal TodayTotal => TodaySales.Sum(s => s.TotalAmount);
+
+    protected override async Task OnInitializedAsync()
+    {
+        todayLong = ShopClock.ToShop(DateTime.UtcNow).ToString("dddd, dd MMMM yyyy");
+        await Db.Init();
+        await Load();
+        Loaded = true;
+    }
+
+    private async Task Load()
+    {
+        Products = await Db.GetProducts();
+        TodaySales = await Db.GetTodaysSales();
+
+        // Recent 5 sales: today's if there are any, otherwise the latest overall.
+        if (TodaySales.Count >= 5) RecentSales = TodaySales.Take(5).ToList();
+        else RecentSales = (await Db.GetAllSales()).Take(5).ToList();
+
+        LowStock = await Db.GetLowStockProducts();
+    }
+}

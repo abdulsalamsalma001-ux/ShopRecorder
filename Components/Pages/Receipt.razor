@@ -1,0 +1,120 @@
+@page "/receipt/{saleId:int}"
+@inject ISQLiteService Db
+@inject IJSRuntime JS
+
+<PageTitle>Receipt — ShopRecorder</PageTitle>
+
+<div class="page receipt-page">
+    @if (!Loaded)
+    {
+        <div class="loading"><span class="spinner-border spinner-border-sm"></span> Loading receipt…</div>
+    }
+    else if (Sale is null)
+    {
+        <div class="not-found">
+            <div class="nf-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <h2>Receipt not found</h2>
+            <p>This sale may have been removed.</p>
+            <NavLink class="btn btn-primary" href="/sales">Back to sales</NavLink>
+        </div>
+    }
+    else
+    {
+        @* ===== Toolbar (hidden when printing) ===== *@
+        <div class="receipt-toolbar">
+            <NavLink class="btn btn-light" href="/sales"><i class="bi bi-arrow-left"></i> Sales</NavLink>
+            <div class="rt-title"><i class="bi bi-printer"></i> Receipt @Fmt.ReceiptNo(Sale.Id)</div>
+            <div class="rt-actions">
+                <button class="btn btn-light" @onclick="Print"><i class="bi bi-printer"></i> Print</button>
+                <button class="btn btn-primary" @onclick="DownloadPdf"><i class="bi bi-download"></i> Download PDF</button>
+            </div>
+        </div>
+
+        @* ===== 58mm thermal paper ===== *@
+        <div class="receipt-wrap">
+            <div id="receiptPaper" class="receipt-paper">
+                <div class="r-shop">@Fmt.ShopName</div>
+                <div class="r-sub">OFFICIAL SALES RECEIPT</div>
+
+                <div class="r-dash"></div>
+
+                <div class="r-meta">
+                    <span>Receipt: @Fmt.ReceiptNo(Sale.Id)</span>
+                    <span>@Fmt.DateTime(Sale.SaleDate)</span>
+                </div>
+
+                <div class="r-dash"></div>
+
+                @foreach (var item in Sale.Items)
+                {
+                    <div class="r-line">
+                        <span class="r-line-name">@item.Quantity x @item.ProductName</span>
+                        <span class="r-line-price">@item.Subtotal.ToString("0.00")</span>
+                    </div>
+                    <div class="r-line r-line-sub">
+                        <span>&nbsp;&nbsp;@("@") @item.Price.ToString("0.00") each</span>
+                        <span></span>
+                    </div>
+                }
+
+                <div class="r-dash"></div>
+
+                <div class="r-line r-total">
+                    <span>TOTAL (GHS)</span>
+                    <span>@Sale.TotalAmount.ToString("0.00")</span>
+                </div>
+                <div class="r-line">
+                    <span>PAID</span>
+                    <span>@Sale.AmountPaid.ToString("0.00")</span>
+                </div>
+                <div class="r-line">
+                    <span>CHANGE</span>
+                    <span>@Sale.ChangeDue.ToString("0.00")</span>
+                </div>
+
+                <div class="r-dash"></div>
+
+                <div class="r-barcode"></div>
+                <div class="r-code">@Fmt.ReceiptNo(Sale.Id)</div>
+                <div class="r-thanks">Thank you for shopping with us!</div>
+                <div class="r-powered">Powered by ShopRecorder</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int SaleId { get; set; }
+
+    private Sale? Sale;
+    private bool Loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Db.Init();
+        Sale = await Db.GetSale(SaleId);
+        Loaded = true;
+    }
+
+    private async Task Print()
+    {
+        try { await JS.InvokeVoidAsync("ui.print"); }
+        catch (JSDisconnectedException) { }
+    }
+
+    private async Task DownloadPdf()
+    {
+        try
+        {
+            var fileName = $"receipt-{Fmt.ReceiptNo(Sale!.Id)}.pdf";
+            await JS.InvokeVoidAsync("downloadReceiptPdf", "receiptPaper", fileName);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException)
+        {
+            await Toast("PDF libraries are still loading — use Print and 'Save as PDF'.", "info");
+        }
+    }
+
+    private Task Toast(string message, string type) => JS.InvokeVoidAsync("ui.toast", message, type).AsTask();
+}
